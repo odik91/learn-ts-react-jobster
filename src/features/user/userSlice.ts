@@ -1,13 +1,13 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import customFetch from "../../utils/axios";
-import { toast } from "react-toastify";
 import axios from "axios";
+import { toast } from "react-toastify";
+import { RootState } from "../../store";
 import {
   addUserToLocalStorage,
   getUserFromLocalStorage,
   removeUserFromLocalStorage,
 } from "../../utils/localStorage";
-import { RootState } from "../../store";
+import { loginUserThunk, registerUserThunk, updateUserThunk } from "./userThunk";
 
 export type UserType = {
   email: string;
@@ -17,7 +17,7 @@ export type UserType = {
   token?: string;
 };
 
-type LoginUser = {
+export type LoginUser = {
   email: string;
   password: string;
 };
@@ -26,8 +26,9 @@ type RegisterUser = LoginUser & {
   name: string;
 };
 
-interface ThunkAPI {
+export interface ThunkAPI {
   rejectWithValue: (value: string) => void;
+  dispatch: Function;
 }
 
 type ReturnUserData = {
@@ -46,8 +47,19 @@ const initialState: InitialStateSlice = {
   user: getUserFromLocalStorage(),
 };
 
-const errorHelperThunkAPI = (error: unknown, thunkAPI: ThunkAPI) => {
+export const errorHelperThunkAPI = (
+  error: unknown,
+  thunkAPI: ThunkAPI,
+  actType: "auth" | "action"
+) => {
   if (axios.isAxiosError(error)) {
+    if (actType === "action") {
+      if (error.response?.status === 401) {
+        thunkAPI.dispatch(logoutUser());
+        return thunkAPI.rejectWithValue("Unauthorized! Logging Out...");
+      }
+    }
+
     return thunkAPI.rejectWithValue(
       error.response?.data?.msg || "An error occurred"
     );
@@ -62,45 +74,27 @@ export const registerUser = createAsyncThunk<
   ReturnUserData, // Tipe untuk hasil sukses
   RegisterUser,
   { rejectValue: string }
->("user/registerUser", async (user: RegisterUser, thunkAPI) => {
-  try {
-    const response = await customFetch.post("/auth/register", user);
-    return response.data;
-  } catch (error: unknown) {
-    return errorHelperThunkAPI(error, thunkAPI);
-  }
+>("user/registerUser", async (user: RegisterUser, thunkAPI): Promise<any> => {
+  return registerUserThunk("/auth/register", user, thunkAPI)
 });
 
 export const loginUser = createAsyncThunk<
   ReturnUserData,
   LoginUser,
-  { rejectValue: string }
->("user/loginUser", async (user: LoginUser, thunkAPI) => {
-  try {
-    const response = await customFetch.post("/auth/login", user);
-    return response.data;
-  } catch (error: unknown) {
-    return errorHelperThunkAPI(error, thunkAPI);
+  { rejectValue: string; state: RootState }
+>(
+  "user/loginUser",
+  async (user: LoginUser, thunkAPI: ThunkAPI): Promise<any> => {
+    return loginUserThunk("/auth/login", user, thunkAPI);
   }
-});
+);
 
 export const updateUser = createAsyncThunk<
   ReturnUserData,
   UserType,
   { rejectValue: string; state: RootState }
->("user/updateUser", async (user, thunkAPI) => {
-  try {
-    const state = thunkAPI.getState();
-    const token = state.user.user?.token;
-    const response = await customFetch.patch("/auth/updateUser", user, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
-  } catch (error: unknown) {
-    return errorHelperThunkAPI(error, thunkAPI);
-  }
+>("user/updateUser", async (user: UserType, thunkAPI: any): Promise<any> => {
+  return updateUserThunk("/auth/updateUser", user, thunkAPI);
 });
 
 const userSlice = createSlice({
