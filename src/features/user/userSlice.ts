@@ -7,7 +7,11 @@ import {
   getUserFromLocalStorage,
   removeUserFromLocalStorage,
 } from "../../utils/localStorage";
-import { loginUserThunk, registerUserThunk, updateUserThunk } from "./userThunk";
+import {
+  loginUserThunk,
+  registerUserThunk,
+  updateUserThunk,
+} from "./userThunk";
 
 export type UserType = {
   email: string;
@@ -75,7 +79,7 @@ export const registerUser = createAsyncThunk<
   RegisterUser,
   { rejectValue: string }
 >("user/registerUser", async (user: RegisterUser, thunkAPI): Promise<any> => {
-  return registerUserThunk("/auth/register", user, thunkAPI)
+  return registerUserThunk("/auth/register", user, thunkAPI);
 });
 
 export const loginUser = createAsyncThunk<
@@ -101,10 +105,13 @@ const userSlice = createSlice({
   name: "user",
   initialState,
   reducers: {
-    logoutUser: (state) => {
+    logoutUser: (state, { payload }: PayloadAction<string | undefined>) => {
       state.user = null;
       state.isSidebarOpen = false;
       removeUserFromLocalStorage();
+      if (payload) {
+        toast.success(payload);
+      }
     },
     toggleSidebar: (state) => {
       state.isSidebarOpen = !state.isSidebarOpen;

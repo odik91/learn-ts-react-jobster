@@ -1,20 +1,34 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { toast } from "react-toastify";
+import { RootState } from "../../store";
+import { createJobThunk } from "./jobThunk";
+import { getUserFromLocalStorage } from "../../utils/localStorage";
 
 type JobTypeOptions = "full-time" | "part-time" | "remote" | "internship";
-
 type StatusOptions = "interview" | "declined" | "pending";
 
-type InitialState = {
-  isLoading: boolean;
+export type Job = {
   position: string;
   company: string;
   jobLocation: string;
-  jobTypeOptions: JobTypeOptions[];
   jobType: JobTypeOptions;
-  statusOptions: StatusOptions[];
   status: StatusOptions;
+};
+
+export type InitialState = Job & {
+  isLoading: boolean;
+  jobTypeOptions: JobTypeOptions[];
+  statusOptions: StatusOptions[];
   isEditing: boolean;
   editJobId: string;
+};
+
+export type JobReturn = Job & {
+  createdBy: string;
+  _id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 };
 
 const initialState: InitialState = {
@@ -30,10 +44,61 @@ const initialState: InitialState = {
   editJobId: "",
 };
 
+export type HandleChangePayload<K extends keyof InitialState> = {
+  name: K;
+  value: InitialState[K];
+};
+
+export const createJob = createAsyncThunk<
+  JobReturn,
+  Job,
+  { rejectValue: string; state: RootState }
+>("job/createJob", async (job: Job, thunkAPI: any): Promise<any> => {
+  return createJobThunk("/jobs", job, thunkAPI);
+});
+
 const jobSlice = createSlice({
   name: "job",
   initialState,
-  reducers: {},
+  reducers: {
+    handleChange: <K extends keyof InitialState>(
+      state: InitialState,
+      action: PayloadAction<HandleChangePayload<K>>
+    ) => {
+      const { name, value } = action.payload;
+      state[name] = value;
+    },
+    clearValues: (): InitialState => {
+      return {
+        ...initialState,
+        jobLocation: getUserFromLocalStorage()?.location || "",
+      };
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(createJob.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(
+        createJob.fulfilled,
+        (state, { payload }: PayloadAction<JobReturn>) => {
+          state.isLoading = false;
+          console.log(payload);
+
+          toast.success("Job created");
+        }
+      )
+      .addCase(
+        createJob.rejected,
+        (state, { payload }: PayloadAction<string | undefined>) => {
+          state.isLoading = false;
+          if (payload) toast.error(payload);
+        }
+      );
+  },
 });
+
+export const { handleChange, clearValues } = jobSlice.actions;
 
 export default jobSlice.reducer;
