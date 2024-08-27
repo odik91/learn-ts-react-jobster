@@ -1,8 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import { RootState } from "../../store";
-import { createJobThunk } from "./jobThunk";
 import { getUserFromLocalStorage } from "../../utils/localStorage";
+import { createJobThunk, deleteJobThunk } from "./jobThunk";
 
 type JobTypeOptions = "full-time" | "part-time" | "remote" | "internship";
 type StatusOptions = "interview" | "declined" | "pending";
@@ -57,6 +57,14 @@ export const createJob = createAsyncThunk<
   return createJobThunk("/jobs", job, thunkAPI);
 });
 
+export const deleteJob = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string; state: RootState }
+>("job/deleteJob", async (jobId, thunkAPI) => {
+  return deleteJobThunk("/jobs/", jobId, thunkAPI);
+});
+
 const jobSlice = createSlice({
   name: "job",
   initialState,
@@ -84,7 +92,7 @@ const jobSlice = createSlice({
         createJob.fulfilled,
         (state, { payload }: PayloadAction<JobReturn>) => {
           state.isLoading = false;
-          console.log(payload);
+          console.log(payload.status);
 
           toast.success("Job created");
         }
@@ -94,6 +102,15 @@ const jobSlice = createSlice({
         (state, { payload }: PayloadAction<string | undefined>) => {
           state.isLoading = false;
           if (payload) toast.error(payload);
+        }
+      )
+      .addCase(deleteJob.fulfilled, (_, { payload }: PayloadAction<string>) => {
+        toast.success(payload || "Job deleted successfully");
+      })
+      .addCase(
+        deleteJob.rejected,
+        (_, { payload }: PayloadAction<string | undefined>) => {
+          toast.error(payload);
         }
       );
   },
