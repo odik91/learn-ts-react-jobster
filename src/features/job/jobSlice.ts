@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import { RootState } from "../../store";
 import { getUserFromLocalStorage } from "../../utils/localStorage";
-import { createJobThunk, deleteJobThunk } from "./jobThunk";
+import { createJobThunk, deleteJobThunk, editJobThunk } from "./jobThunk";
 
 type JobTypeOptions = "full-time" | "part-time" | "remote" | "internship";
 type StatusOptions = "interview" | "declined" | "pending";
@@ -49,6 +49,8 @@ export type HandleChangePayload<K extends keyof InitialState> = {
   value: InitialState[K];
 };
 
+export type EditJob = { jobId: string; job: Job };
+
 export const createJob = createAsyncThunk<
   JobReturn,
   Job,
@@ -63,6 +65,14 @@ export const deleteJob = createAsyncThunk<
   { rejectValue: string; state: RootState }
 >("job/deleteJob", async (jobId, thunkAPI) => {
   return deleteJobThunk("/jobs/", jobId, thunkAPI);
+});
+
+export const editJob = createAsyncThunk<
+  Job,
+  EditJob,
+  { rejectValue: string; state: RootState }
+>("job/editJob", async ({ jobId, job }, thunkAPI) => {
+  return editJobThunk("/jobs/", { jobId, job }, thunkAPI);
 });
 
 const jobSlice = createSlice({
@@ -81,6 +91,9 @@ const jobSlice = createSlice({
         ...initialState,
         jobLocation: getUserFromLocalStorage()?.location || "",
       };
+    },
+    setEditJob: (state, { payload }) => {
+      return { ...state, isEditing: true, ...payload };
     },
   },
   extraReducers: (builder) => {
@@ -112,10 +125,24 @@ const jobSlice = createSlice({
         (_, { payload }: PayloadAction<string | undefined>) => {
           toast.error(payload);
         }
+      )
+      .addCase(editJob.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(editJob.fulfilled, (state) => {
+        state.isLoading = false;
+        toast.success("Job Modified");
+      })
+      .addCase(
+        editJob.rejected,
+        (state, { payload }: PayloadAction<string | undefined>) => {
+          state.isLoading = false;
+          if (payload) toast.error(payload);
+        }
       );
   },
 });
 
-export const { handleChange, clearValues } = jobSlice.actions;
+export const { handleChange, clearValues, setEditJob } = jobSlice.actions;
 
 export default jobSlice.reducer;

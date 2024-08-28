@@ -43,12 +43,7 @@ export const updateUserThunk = async (
   thunkAPI: AppThunkAPI
 ): Promise<UserType | unknown> => {
   try {
-    const token = thunkAPI.getState().user.user?.token;
-    const response = await customFetch.patch(url, user, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await customFetch.patch(url, user);
     return response.data;
   } catch (error: unknown) {
     return errorHelperThunkAPI(error, thunkAPI, "action");

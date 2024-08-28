@@ -7,16 +7,16 @@ import { errorHelperThunkAPI } from "../user/userSlice";
 type Sort = "latest" | "oldest" | "a-z" | "z-a";
 
 export type JobData = {
-  _id?: string;
-  company?: string;
-  position?: string;
-  status?: string;
-  createdBy?: string;
-  jobType?: string;
-  jobLocation?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  __v?: number;
+  _id: string;
+  company: string;
+  position: string;
+  status: string;
+  createdBy: string;
+  jobType: string;
+  jobLocation: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 };
 
 type ResponseJobData = {
@@ -69,12 +69,7 @@ export const getAllJobs = createAsyncThunk<
 >("allJobs/getJobs", async (_, thunkAPI) => {
   let url = `/jobs`;
   try {
-    const token = thunkAPI.getState().user.user?.token;
-    const response = await customFetch.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await customFetch.get(url);
     return response.data;
   } catch (error: unknown) {
     return errorHelperThunkAPI(error, thunkAPI, "action");

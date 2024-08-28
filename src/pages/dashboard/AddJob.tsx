@@ -6,6 +6,7 @@ import FormRowSelect from "../../components/FormRowSelect";
 import {
   clearValues,
   createJob,
+  editJob,
   handleChange,
   HandleChangePayload,
 } from "../../features/job/jobSlice";
@@ -33,6 +34,22 @@ const AddJob = () => {
 
     if (!position || !company || !jobLocation) {
       toast.error("Please fill out all fields");
+      return;
+    }
+
+    if (isEditing) {
+      dispatch(
+        editJob({
+          jobId: editJobId,
+          job: {
+            position,
+            company,
+            jobLocation,
+            jobType,
+            status,
+          },
+        })
+      );
       return;
     }
 
