@@ -25,6 +25,17 @@ type ResponseJobData = {
   numOfPages: number;
 };
 
+export type MonthlyApplications = {
+  date: string;
+  count: number;
+};
+
+export type DefaultStats = {
+  pending: number;
+  interview: number;
+  declined: number;
+};
+
 interface InitialFilterState {
   search: string;
   searchStatus: string;
@@ -39,8 +50,13 @@ interface InitialState extends InitialFilterState {
   totalJobs: number;
   numOfPages: number;
   page: number;
-  stats: {};
-  monthlyApplications: [];
+  stats: DefaultStats | null;
+  monthlyApplications: MonthlyApplications[];
+}
+
+interface StatsData {
+  defaultStats: DefaultStats;
+  monthlyApplications: MonthlyApplications[];
 }
 
 const initialFilterState: InitialFilterState = {
@@ -57,7 +73,7 @@ const initialState: InitialState = {
   totalJobs: 0,
   numOfPages: 1,
   page: 1,
-  stats: {},
+  stats: null,
   monthlyApplications: [],
   ...initialFilterState,
 };
@@ -70,6 +86,20 @@ export const getAllJobs = createAsyncThunk<
   let url = `/jobs`;
   try {
     const response = await customFetch.get(url);
+    return response.data;
+  } catch (error: unknown) {
+    return errorHelperThunkAPI(error, thunkAPI, "action");
+  }
+});
+
+export const showStats = createAsyncThunk<
+  any,
+  void,
+  { rejectValue: string; state: RootState }
+>("allJobs/showStats", async (_, thunkAPI) => {
+  try {
+    const response = await customFetch.get("/jobs/stats");
+
     return response.data;
   } catch (error: unknown) {
     return errorHelperThunkAPI(error, thunkAPI, "action");
@@ -102,6 +132,25 @@ const allJobsSlice = createSlice({
       )
       .addCase(
         getAllJobs.rejected,
+        (state, { payload }: PayloadAction<string | undefined>) => {
+          state.isLoading = false;
+          if (payload) toast.error(payload);
+        }
+      )
+      .addCase(showStats.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(
+        showStats.fulfilled,
+        (state, { payload }: PayloadAction<StatsData>) => {
+          state.isLoading = false;
+
+          state.stats = payload.defaultStats;
+          state.monthlyApplications = payload.monthlyApplications;
+        }
+      )
+      .addCase(
+        showStats.rejected,
         (state, { payload }: PayloadAction<string | undefined>) => {
           state.isLoading = false;
           if (payload) toast.error(payload);
