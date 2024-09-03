@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../hooks/userCustomHook";
 import Wrapper from "../assets/wrappers/SearchContainer";
 import FormRow from "./FormRow";
@@ -6,6 +6,7 @@ import FormRowSelect from "./FormRowSelect";
 import { clearFilters, handleChange } from "../features/allJobs/allJobsSlice";
 
 const SearchContainer = () => {
+  const [localSearch, setLocalSearch] = useState("");
   const { isLoading, search, searchStatus, searchType, sort, sortOptions } =
     useAppSelector((store) => store.allJobs);
   const { jobTypeOptions, statusOptions } = useAppSelector(
@@ -16,14 +17,27 @@ const SearchContainer = () => {
   const handleSearch = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ): void => {
-    if (isLoading) return;
     dispatch(handleChange({ name: e.target.name, value: e.target.value }));
+  };
+
+  const debounce = () => {
+    let timeoutID: number;
+    return (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setLocalSearch(e.target.value);
+      clearTimeout(timeoutID);
+      timeoutID = setTimeout(() => {
+        dispatch(handleChange({ name: e.target.name, value: e.target.value }));
+      }, 1000);
+    };
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    dispatch(clearFilters())
+    setLocalSearch("");
+    dispatch(clearFilters());
   };
+
+  const optimizedDebounce = useMemo(() => debounce(), []);
 
   return (
     <Wrapper>
@@ -34,8 +48,8 @@ const SearchContainer = () => {
           <FormRow
             type="text"
             name="search"
-            value={search}
-            handleChange={handleSearch}
+            value={localSearch}
+            handleChange={optimizedDebounce}
           />
 
           {/* search by status */}
