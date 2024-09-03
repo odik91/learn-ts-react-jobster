@@ -1,8 +1,11 @@
 import { RootState } from "../../store";
 import customFetch from "../../utils/axios";
+import { clearAllJobsState } from "../allJobs/allJobsSlice";
+import { clearValues } from "../job/jobSlice";
 import {
   errorHelperThunkAPI,
   LoginUser,
+  logoutUser,
   ThunkAPI,
   UserType,
 } from "./userSlice";
@@ -47,5 +50,18 @@ export const updateUserThunk = async (
     return response.data;
   } catch (error: unknown) {
     return errorHelperThunkAPI(error, thunkAPI, "action");
+  }
+};
+
+export const clearStoreThunk = async (
+  message: string,
+  thunkAPI: AppThunkAPI
+) => {
+  try {
+    thunkAPI.dispatch(logoutUser(message));
+    thunkAPI.dispatch(clearAllJobsState());
+    thunkAPI.dispatch(clearValues());
+  } catch (error) {
+    return Promise.reject();
   }
 };

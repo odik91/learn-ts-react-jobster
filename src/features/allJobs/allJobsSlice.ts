@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { toast } from "react-toastify";
 import { RootState } from "../../store";
-import customFetch from "../../utils/axios";
-import { errorHelperThunkAPI } from "../user/userSlice";
+// import customFetch from "../../utils/axios";
+// import { errorHelperThunkAPI } from "../user/userSlice";
+import { getAllJobsThunk, showStatsThunk } from "./allJobsThunk";
 
 type Sort = "latest" | "oldest" | "a-z" | "z-a";
 
@@ -59,6 +60,11 @@ interface StatsData {
   monthlyApplications: MonthlyApplications[];
 }
 
+type HandleChangePayload<K extends keyof InitialState> = {
+  name: K;
+  value: InitialState[K];
+};
+
 const initialFilterState: InitialFilterState = {
   search: "",
   searchStatus: "all",
@@ -78,32 +84,56 @@ const initialState: InitialState = {
   ...initialFilterState,
 };
 
+// export const getAllJobs = createAsyncThunk<
+//   ResponseJobData,
+//   void,
+//   { rejectValue: string; state: RootState }
+// >("allJobs/getJobs", async (_, thunkAPI) => {
+//   const { page, search, searchStatus, searchType, sort } =
+//     thunkAPI.getState().allJobs;
+
+//   let url = `/jobs?status${searchStatus}&jobType=${searchType}&sort=${sort}&page=${page}`;
+
+//   if (search) {
+//     url = url + `&search=${search}`;
+//   }
+
+//   try {
+//     const response = await customFetch.get(url);
+//     return response.data;
+//   } catch (error: unknown) {
+//     return errorHelperThunkAPI(error, thunkAPI, "action");
+//   }
+// });
+
 export const getAllJobs = createAsyncThunk<
   ResponseJobData,
   void,
   { rejectValue: string; state: RootState }
 >("allJobs/getJobs", async (_, thunkAPI) => {
-  let url = `/jobs`;
-  try {
-    const response = await customFetch.get(url);
-    return response.data;
-  } catch (error: unknown) {
-    return errorHelperThunkAPI(error, thunkAPI, "action");
-  }
+  return getAllJobsThunk(thunkAPI);
 });
+
+// export const showStats = createAsyncThunk<
+//   any,
+//   void,
+//   { rejectValue: string; state: RootState }
+// >("allJobs/showStats", async (_, thunkAPI) => {
+//   try {
+//     const response = await customFetch.get("/jobs/stats");
+
+//     return response.data;
+//   } catch (error: unknown) {
+//     return errorHelperThunkAPI(error, thunkAPI, "action");
+//   }
+// });
 
 export const showStats = createAsyncThunk<
   any,
   void,
   { rejectValue: string; state: RootState }
 >("allJobs/showStats", async (_, thunkAPI) => {
-  try {
-    const response = await customFetch.get("/jobs/stats");
-
-    return response.data;
-  } catch (error: unknown) {
-    return errorHelperThunkAPI(error, thunkAPI, "action");
-  }
+  return showStatsThunk(_, thunkAPI);
 });
 
 const allJobsSlice = createSlice({
@@ -116,6 +146,20 @@ const allJobsSlice = createSlice({
     hideLoading: (state) => {
       state.isLoading = false;
     },
+    handleChange: (
+      state: any,
+      { payload: { name, value } }: PayloadAction<HandleChangePayload<any>>
+    ) => {
+      state.page = 1;
+      state[name] = value;
+    },
+    clearFilters: (state) => {
+      return { ...state, ...initialFilterState };
+    },
+    changePage: (state, { payload }: PayloadAction<number>) => {
+      state.page = payload;
+    },
+    clearAllJobsState: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -128,6 +172,8 @@ const allJobsSlice = createSlice({
           state.isLoading = false;
 
           state.jobs = payload.jobs;
+          state.numOfPages = payload.numOfPages;
+          state.totalJobs = payload.totalJobs;
         }
       )
       .addCase(
@@ -158,5 +204,12 @@ const allJobsSlice = createSlice({
       );
   },
 });
-export const { showLoading, hideLoading } = allJobsSlice.actions;
+export const {
+  showLoading,
+  hideLoading,
+  handleChange,
+  clearFilters,
+  changePage,
+  clearAllJobsState,
+} = allJobsSlice.actions;
 export default allJobsSlice.reducer;
